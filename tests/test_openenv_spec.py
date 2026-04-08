@@ -31,3 +31,11 @@ def test_server_supports_reset_step_and_state() -> None:
     state = client.get("/state")
     assert state.status_code == 200
     assert state.json()["hidden_truth"]["root_cause_service"] == "auth-service"
+
+
+def test_step_rejects_malformed_action_with_422() -> None:
+    client = TestClient(app)
+    client.post("/reset?difficulty=easy&seed=3")
+
+    malformed = client.post("/step", json={})
+    assert malformed.status_code == 422

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, Query
-from pydantic import TypeAdapter
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import TypeAdapter, ValidationError
 
 from src.env import SREIncidentTriageEnv
 from src.models import IncidentAction, IncidentState, StepResult
@@ -50,7 +50,10 @@ def reset(
 
 @app.post("/step", response_model=StepResult)
 def step(action: dict[str, Any]) -> StepResult:
-    parsed = ACTION_ADAPTER.validate_python(action)
+    try:
+        parsed = ACTION_ADAPTER.validate_python(action)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
     return env.step(parsed)
 
 
