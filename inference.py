@@ -15,6 +15,11 @@ DEFAULT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 DEFAULT_BASE_URL = "https://router.huggingface.co/v1"
 DEFAULT_BENCHMARK = "sre_incident_triage_env"
 
+API_BASE_URL = os.getenv("API_BASE_URL", DEFAULT_BASE_URL)
+MODEL_NAME = os.getenv("MODEL_NAME", DEFAULT_MODEL)
+HF_TOKEN = os.getenv("HF_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 
 class ActionEnvelope(BaseModel):
     action: dict[str, Any]
@@ -22,12 +27,14 @@ class ActionEnvelope(BaseModel):
 
 class BaselinePolicy:
     def __init__(self) -> None:
-        self.api_base_url = os.getenv("API_BASE_URL", DEFAULT_BASE_URL)
-        self.model_name = os.getenv("MODEL_NAME", DEFAULT_MODEL)
+        self.api_base_url = API_BASE_URL
+        self.model_name = MODEL_NAME
         self.benchmark = os.getenv("BENCHMARK", DEFAULT_BENCHMARK)
-        self.api_key = os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY") or "offline-baseline"
-        self.offline = os.getenv("OPENAI_API_KEY") is None and os.getenv("HF_TOKEN") is None
-        self.client = OpenAI(base_url=self.api_base_url, api_key=self.api_key)
+        self.hf_token = HF_TOKEN
+        self.openai_api_key = OPENAI_API_KEY
+        self.api_key = self.hf_token or self.openai_api_key
+        self.offline = self.api_key is None
+        self.client = OpenAI(base_url=self.api_base_url, api_key=self.api_key or "offline-placeholder-key")
 
     def choose_action(self, observation: dict[str, Any]) -> dict[str, Any]:
         heuristic = self._heuristic_action(observation)
