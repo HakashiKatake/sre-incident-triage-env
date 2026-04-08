@@ -287,16 +287,18 @@ def _affected_services_from_root(root_service: str, available_services: list[str
 def main() -> None:
     policy = BaselinePolicy()
     for task_name, difficulty, split, seed in evaluation_suite():
-        env = SREIncidentTriageEnv(difficulty=difficulty, seed=seed, split=split)
         print(f"[START] task={task_name} env={policy.benchmark} model={policy.model_name}")
-        result = env.reset(difficulty=difficulty, seed=seed, split=split)
-        done = False
+        env = SREIncidentTriageEnv(difficulty=difficulty, seed=seed, split=split)
+        done = True
         success = False
         score = 0.0
         rewards: list[float] = []
         steps = 0
         error: str | None = None
+        result = None
         try:
+            result = env.reset(difficulty=difficulty, seed=seed, split=split)
+            done = bool(result.done)
             while not done:
                 observation = result.observation.model_dump(mode="json")
                 action_dict = policy.choose_action(observation)
@@ -314,19 +316,21 @@ def main() -> None:
                     f"done={_format_bool(done)} "
                     f"error={_format_error(error)}"
                 )
-            score = float(result.info.get("score", 0.0))
+            if result is not None:
+                score = float(result.info.get("score", 0.0))
             success = True
         except Exception as exc:
             error = str(exc)
             success = False
-        rewards_str = ",".join(f"{reward:.2f}" for reward in rewards)
-        print(
-            "[END] "
-            f"success={_format_bool(success)} "
-            f"steps={steps} "
-            f"score={score:.2f} "
-            f"rewards={rewards_str if rewards_str else '0.00'}"
-        )
+        finally:
+            rewards_str = ",".join(f"{reward:.2f}" for reward in rewards)
+            print(
+                "[END] "
+                f"success={_format_bool(success)} "
+                f"steps={steps} "
+                f"score={score:.2f} "
+                f"rewards={rewards_str if rewards_str else '0.00'}"
+            )
 
 
 if __name__ == "__main__":
