@@ -130,8 +130,8 @@ Raw report is written to `outputs/benchmark_deployed.json`.
 | Metric | Value |
 |---|---:|
 | Episodes | 6 |
-| Mean score | 1.00 |
-| Min/Max score | 1.00 / 1.00 |
+| Mean score | 0.99 |
+| Min/Max score | 0.99 / 0.99 |
 | Mean steps per episode | 10.33 |
 | `reset` latency p50 / p95 | 876.80 ms / 899.32 ms |
 | `step` latency p50 / p95 | 870.60 ms / 1407.36 ms |
@@ -141,12 +141,12 @@ Raw report is written to `outputs/benchmark_deployed.json`.
 
 | Task | Seed | Steps | Score | Reward Sum |
 |---|---:|---:|---:|---:|
-| easy_public | 11 | 10 | 1.00 | 1.66 |
-| medium_public | 22 | 10 | 1.00 | 1.72 |
-| hard_public | 33 | 11 | 1.00 | 1.78 |
-| easy_holdout | 111 | 10 | 1.00 | 1.66 |
-| medium_holdout | 122 | 10 | 1.00 | 1.72 |
-| hard_holdout | 133 | 11 | 1.00 | 1.78 |
+| easy_public | 11 | 10 | 0.99 | 1.66 |
+| medium_public | 22 | 10 | 0.99 | 1.72 |
+| hard_public | 33 | 11 | 0.99 | 1.78 |
+| easy_holdout | 111 | 10 | 0.99 | 1.66 |
+| medium_holdout | 122 | 10 | 0.99 | 1.72 |
+| hard_holdout | 133 | 11 | 0.99 | 1.78 |
 
 ```mermaid
 sequenceDiagram
