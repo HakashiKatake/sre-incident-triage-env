@@ -184,7 +184,8 @@ def grade_episode(scenario: IncidentScenario, state: IncidentState) -> dict[str,
         + weighted["efficiency"] * 0.03
         + weighted["safety"] * 0.09
     )
-    weighted["final"] = round(min(1.0, max(0.0, final_score)), 4)
+    # Hackathon validator requires strict open interval (0, 1), not inclusive bounds.
+    weighted["final"] = round(min(0.99, max(0.01, final_score)), 4)
     return {
         **weighted,
         "counterfactual": _counterfactual_messages(weighted, scenario),
@@ -201,4 +202,3 @@ def grade_medium(state: IncidentState, scenario: IncidentScenario) -> float:
 
 def grade_hard(state: IncidentState, scenario: IncidentScenario) -> float:
     return float(grade_episode(scenario, state)["final"])
-
