@@ -36,7 +36,7 @@ The agent must inspect evidence, classify severity, identify root cause, propose
 2. Implemented deterministic scenario templates for `easy`, `medium`, `hard`, each with `public` and `holdout` splits.
 3. Added step-wise reward shaping for useful evidence gathering and safe operations.
 4. Implemented deterministic graders with weighted dimensions (root cause, severity, mitigation, trace evidence, safety, efficiency, postmortem quality).
-5. Added OpenAI-client baseline inference with strict `[START]`, `[RESET]`, `[STEP]`, `[END]` logs.
+5. Added OpenAI-client baseline inference with strict `[START]`, `[STEP]`, `[END]` logs.
 6. Packaged as Docker Space with FastAPI endpoints and OpenEnv manifest.
 
 ## Why Companies Benefit

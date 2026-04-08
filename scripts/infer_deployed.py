@@ -29,17 +29,6 @@ def _format_action(action: dict[str, Any]) -> str:
     return json.dumps(action, separators=(",", ":"), sort_keys=True)
 
 
-def _format_reset(task_name: str, difficulty: str, split: str, seed: int, done: bool) -> str:
-    return (
-        "[RESET] "
-        f"task={task_name} "
-        f"difficulty={difficulty} "
-        f"split={split} "
-        f"seed={seed} "
-        f"done={_format_bool(done)}"
-    )
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run baseline policy against deployed SRE Incident Triage API.")
     parser.add_argument(
@@ -72,7 +61,6 @@ def main() -> None:
             reset_resp.raise_for_status()
             result = reset_resp.json()
             done = bool(result["done"])
-            print(_format_reset(task_name, difficulty, split, seed, done))
             while not done:
                 assert result is not None
                 action = policy.choose_action(result["observation"])
