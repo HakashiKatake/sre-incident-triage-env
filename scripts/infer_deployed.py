@@ -29,6 +29,17 @@ def _format_action(action: dict[str, Any]) -> str:
     return json.dumps(action, separators=(",", ":"), sort_keys=True)
 
 
+def _format_reset(task_name: str, difficulty: str, split: str, seed: int, done: bool) -> str:
+    return (
+        "[RESET] "
+        f"task={task_name} "
+        f"difficulty={difficulty} "
+        f"split={split} "
+        f"seed={seed} "
+        f"done={_format_bool(done)}"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run baseline policy against deployed SRE Incident Triage API.")
     parser.add_argument(
@@ -45,19 +56,25 @@ def main() -> None:
 
     for task_name, difficulty, split, seed in evaluation_suite():
         print(f"[START] task={task_name} env={benchmark_name} model={policy.model_name}")
-        result = requests.post(
-            f"{base_url}/reset",
-            params={"difficulty": difficulty, "split": split, "seed": seed},
-            timeout=args.timeout,
-        ).json()
-        done = bool(result["done"])
+        done = True
         rewards: list[float] = []
         steps = 0
         score = 0.0
         success = False
         error: str | None = None
+        result: dict[str, Any] | None = None
         try:
+            reset_resp = requests.post(
+                f"{base_url}/reset",
+                params={"difficulty": difficulty, "split": split, "seed": seed},
+                timeout=args.timeout,
+            )
+            reset_resp.raise_for_status()
+            result = reset_resp.json()
+            done = bool(result["done"])
+            print(_format_reset(task_name, difficulty, split, seed, done))
             while not done:
+                assert result is not None
                 action = policy.choose_action(result["observation"])
                 ACTION_ADAPTER.validate_python(action)
                 step_resp = requests.post(f"{base_url}/step", json=action, timeout=args.timeout)
@@ -76,7 +93,8 @@ def main() -> None:
                     f"done={_format_bool(done)} "
                     f"error={_format_error(error)}"
                 )
-            score = float(result.get("info", {}).get("score", 0.0))
+            if result is not None:
+                score = float(result.get("info", {}).get("score", 0.0))
             success = True
         except Exception as exc:
             error = str(exc)

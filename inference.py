@@ -179,6 +179,17 @@ def _format_error(error: str | None) -> str:
     return "null" if error is None else error
 
 
+def _format_reset(task_name: str, difficulty: str, split: str, seed: int, done: bool) -> str:
+    return (
+        "[RESET] "
+        f"task={task_name} "
+        f"difficulty={difficulty} "
+        f"split={split} "
+        f"seed={seed} "
+        f"done={_format_bool(done)}"
+    )
+
+
 def _normalize(value: str) -> str:
     return " ".join(value.lower().replace("-", " ").replace("_", " ").split())
 
@@ -299,6 +310,7 @@ def main() -> None:
         try:
             result = env.reset(difficulty=difficulty, seed=seed, split=split)
             done = bool(result.done)
+            print(_format_reset(task_name, difficulty, split, seed, done))
             while not done:
                 observation = result.observation.model_dump(mode="json")
                 action_dict = policy.choose_action(observation)
