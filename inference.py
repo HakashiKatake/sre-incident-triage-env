@@ -39,7 +39,7 @@ class BaselinePolicy:
     def choose_action(self, observation: dict[str, Any]) -> dict[str, Any]:
         heuristic = self._heuristic_action(observation)
         if self.offline:
-            return heuristic
+            return self._validated_action_or_fallback(heuristic, heuristic)
         prompt = self._build_prompt(observation, heuristic)
         try:
             response = self.client.chat.completions.create(
@@ -58,9 +58,17 @@ class BaselinePolicy:
             )
             content = response.choices[0].message.content or ""
             payload = ActionEnvelope.model_validate_json(_extract_json(content))
-            return payload.action
+            return self._validated_action_or_fallback(payload.action, heuristic)
         except Exception:
-            return heuristic
+            return self._validated_action_or_fallback(heuristic, heuristic)
+
+    def _validated_action_or_fallback(self, candidate: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+        try:
+            parsed = ACTION_ADAPTER.validate_python(candidate)
+            return parsed.model_dump(mode="json")
+        except Exception:
+            parsed_fallback = ACTION_ADAPTER.validate_python(fallback)
+            return parsed_fallback.model_dump(mode="json")
 
     def _heuristic_action(self, observation: dict[str, Any]) -> dict[str, Any]:
         assessment = observation["current_assessment"]
@@ -186,6 +194,14 @@ def _format_error(error: str | None) -> str:
     return "null" if error is None else error
 
 
+def _strict_score(value: Any) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return 0.01
+    return min(0.99, max(0.01, parsed))
+
+
 def _normalize(value: str) -> str:
     return " ".join(value.lower().replace("-", " ").replace("_", " ").split())
 
@@ -298,7 +314,7 @@ def main() -> None:
         env = SREIncidentTriageEnv(difficulty=difficulty, seed=seed, split=split)
         done = True
         success = False
-        score = 0.0
+        score = 0.01
         rewards: list[float] = []
         steps = 0
         error: str | None = None
@@ -309,7 +325,6 @@ def main() -> None:
             while not done:
                 observation = result.observation.model_dump(mode="json")
                 action_dict = policy.choose_action(observation)
-                ACTION_ADAPTER.validate_python(action_dict)
                 result = env.step(action_dict)
                 steps = result.observation.step_count
                 done = result.done
@@ -324,10 +339,11 @@ def main() -> None:
                     f"error={_format_error(error)}"
                 )
             if result is not None:
-                score = float(result.info.get("score", 0.0))
+                score = _strict_score(result.info.get("score", score))
             success = True
         except Exception as exc:
             error = str(exc)
+            score = _strict_score(score)
             success = False
         finally:
             rewards_str = ",".join(f"{reward:.2f}" for reward in rewards)

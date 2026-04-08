@@ -13,7 +13,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from inference import BaselinePolicy
-from src.env import ACTION_ADAPTER
 from src.scenarios import evaluation_suite
 
 
@@ -27,6 +26,14 @@ def _format_error(error: str | None) -> str:
 
 def _format_action(action: dict[str, Any]) -> str:
     return json.dumps(action, separators=(",", ":"), sort_keys=True)
+
+
+def _strict_score(value: Any) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return 0.01
+    return min(0.99, max(0.01, parsed))
 
 
 def main() -> None:
@@ -48,7 +55,7 @@ def main() -> None:
         done = True
         rewards: list[float] = []
         steps = 0
-        score = 0.0
+        score = 0.01
         success = False
         error: str | None = None
         result: dict[str, Any] | None = None
@@ -64,7 +71,6 @@ def main() -> None:
             while not done:
                 assert result is not None
                 action = policy.choose_action(result["observation"])
-                ACTION_ADAPTER.validate_python(action)
                 step_resp = requests.post(f"{base_url}/step", json=action, timeout=args.timeout)
                 step_resp.raise_for_status()
                 result = step_resp.json()
@@ -82,10 +88,11 @@ def main() -> None:
                     f"error={_format_error(error)}"
                 )
             if result is not None:
-                score = float(result.get("info", {}).get("score", 0.0))
+                score = _strict_score(result.get("info", {}).get("score", score))
             success = True
         except Exception as exc:
             error = str(exc)
+            score = _strict_score(score)
             success = False
         rewards_str = ",".join(f"{r:.2f}" for r in rewards) if rewards else "0.00"
         print(

@@ -7,6 +7,10 @@ from src.models import IncidentState, MitigationPlan
 from src.scenarios import IncidentScenario
 
 
+def _strict_open_interval_score(value: float) -> float:
+    return round(min(0.99, max(0.01, float(value))), 4)
+
+
 def _normalize(text: str) -> str:
     return " ".join(text.lower().replace("-", " ").replace("_", " ").split())
 
@@ -151,7 +155,7 @@ def grade_episode(scenario: IncidentScenario, state: IncidentState) -> dict[str,
         1.0 - (state.metrics.repeated_actions * 0.07) - (state.metrics.incorrect_actions * 0.10),
     )
 
-    weighted: dict[str, float] = {
+    raw_weighted: dict[str, float] = {
         "root_cause_service": root_service_score,
         "root_cause_category": root_category_score,
         "runbook_diagnosis": root_runbook_score,
@@ -169,26 +173,27 @@ def grade_episode(scenario: IncidentScenario, state: IncidentState) -> dict[str,
     }
 
     final_score = (
-        weighted["root_cause_service"] * 0.14
-        + weighted["root_cause_category"] * 0.10
-        + weighted["runbook_diagnosis"] * 0.06
-        + weighted["severity"] * 0.08
-        + weighted["mitigation"] * 0.12
-        + weighted["runbook_mitigation"] * 0.06
-        + weighted["mitigation_execution"] * 0.12
-        + weighted["affected_services"] * 0.07
-        + weighted["postmortem_quality"] * 0.09
-        + weighted["trace_evidence"] * 0.06
-        + weighted["business_impact"] * 0.04
-        + weighted["policy"] * 0.04
-        + weighted["efficiency"] * 0.03
-        + weighted["safety"] * 0.09
+        raw_weighted["root_cause_service"] * 0.14
+        + raw_weighted["root_cause_category"] * 0.10
+        + raw_weighted["runbook_diagnosis"] * 0.06
+        + raw_weighted["severity"] * 0.08
+        + raw_weighted["mitigation"] * 0.12
+        + raw_weighted["runbook_mitigation"] * 0.06
+        + raw_weighted["mitigation_execution"] * 0.12
+        + raw_weighted["affected_services"] * 0.07
+        + raw_weighted["postmortem_quality"] * 0.09
+        + raw_weighted["trace_evidence"] * 0.06
+        + raw_weighted["business_impact"] * 0.04
+        + raw_weighted["policy"] * 0.04
+        + raw_weighted["efficiency"] * 0.03
+        + raw_weighted["safety"] * 0.09
     )
     # Hackathon validator requires strict open interval (0, 1), not inclusive bounds.
-    weighted["final"] = round(min(0.99, max(0.01, final_score)), 4)
+    weighted = {key: _strict_open_interval_score(value) for key, value in raw_weighted.items()}
+    weighted["final"] = _strict_open_interval_score(final_score)
     return {
         **weighted,
-        "counterfactual": _counterfactual_messages(weighted, scenario),
+        "counterfactual": _counterfactual_messages(raw_weighted, scenario),
     }
 
 
